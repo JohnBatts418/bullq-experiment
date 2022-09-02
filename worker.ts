@@ -9,12 +9,15 @@ export const jobData: JobData = {
   testKey: 'testValue',
 };
 
-const ANALYSIS_CONCURRENCY = 1;
+const ANALYSIS_CONCURRENCY = 2;
 
 export const analysisQueue = new Bull<JobData>('localTestQ', 'redis://127.0.0.1:6379', {
   redis: REDIS_OPTIONS,
   settings: {
     maxStalledCount: 3,
+    stalledInterval: 1000,
+    lockDuration: 2000,
+    lockRenewTime: 1000,
     retryProcessDelay: 2000,
   },
   defaultJobOptions: {
@@ -26,9 +29,13 @@ export const analysisQueue = new Bull<JobData>('localTestQ', 'redis://127.0.0.1:
   },
 });
 
-analysisQueue.on('waiting', async jobId => {
+analysisQueue.on('stalled', async job => {
+  console.log(`Job ${job.id} stalled, on attempt ${job.attemptsMade}`);
+  // await storeProgressData(`${jobId}`, 'WAITING');
+});
+analysisQueue.on('waiting', async job => {
   console.log(`Job ${jobId} is now waiting`);
-  await storeProgressData(`${jobId}`, 'WAITING');
+  await storeProgressData(`${job}`, 'WAITING');
 });
 
 analysisQueue.on('completed', async (job, result) => {
@@ -40,17 +47,26 @@ analysisQueue.on('failed', async (job, err) => {
   await storeProgressData(`${job.id}`, 'FAILED');
 });
 
-async function analyze(job: Bull.Job<JobData>, done: () => any) {
-  console.log(`Analyzing job ${job.id}`);
+async function analyze(job: Bull.Job<JobData>) {
+  console.log('Analyzing job %s', job.id);
   await storeProgressData(`${job.id}`, 'PROCESSING');
+
+  const { createHash } = await import('node:crypto');
+  //block the event
+  let hash = createHash('sha256');
+  const numberOfHasUpdates = 10e6;
+
+  for (let iter = 0; iter < numberOfHasUpdates; iter++) {
+    hash.update('aaaaaabbbbbccccccc');
+  }
 
   const updateProgressCallback = async (progress: number): Promise<void> => {
     await job.progress(progress);
   };
   await sleeper(job, updateProgressCallback);
 
-  console.log(`processor done for job ${job.id}`);
-  return done();
+  console.log('processor done for job %s', job.id);
+  return;
 }
 
 void analysisQueue.process('*', ANALYSIS_CONCURRENCY, analyze);
@@ -65,7 +81,7 @@ async function sleeper(job: Bull.Job<JobData>, updateProgressCallback: (progress
   let ticker = 0;
   for (ticker; ticker < 10; ticker++) {
     updateProgressCallback(ticker);
-    console.log(`Waiting ${ticker} seconds... for job ${job.id}`);
+    console.log(`Waiting ${ticker} seconds... for job ${job.id}, attempt: ${job.attemptsMade}`);
     await sleep(ticker * 1000);
   }
   console.log(`Sleeping done for job ${job.id}`);
@@ -73,7 +89,7 @@ async function sleeper(job: Bull.Job<JobData>, updateProgressCallback: (progress
 
 export async function storeProgressData(keyHash: string, data: string): Promise<void> {
   const ttl = 360;
-  await redisCommands.setex(`myKey: ${keyHash}`, ttl, `${JSON.stringify(data)}`);
+  await redisCommands.setex(`SnykStateTracker: ${keyHash}`, ttl, `${JSON.stringify(data)}`);
 }
 
 analysisQueue.add('exampleJob1', jobData, {

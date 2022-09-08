@@ -1,8 +1,7 @@
 import Redis from 'ioredis';
 
-
 export const REDIS_URL = '127.0.0.1:6379';
-const REDIS_PASSWORD =  undefined;
+const REDIS_PASSWORD = undefined;
 
 export const REDIS_OPTIONS: Redis.RedisOptions = {
   password: REDIS_PASSWORD,
@@ -27,6 +26,8 @@ client.on('reconnecting', (err: any) => {
   console.warn({ err }, 'Redis attempting to reconnect');
 });
 
+export const flushDB = () => client.flushdb();
+
 export const redisCommands = {
   get: client.get.bind(client),
   set: client.set.bind(client),
@@ -50,5 +51,3 @@ export const redisCommands = {
   keys: client.keys.bind(client),
   flushdb: client.flushdb.bind(client),
 };
-
-

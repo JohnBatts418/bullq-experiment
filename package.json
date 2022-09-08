@@ -4,8 +4,9 @@
   "description": "",
   "main": "worker.js",
   "scripts": {
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "npx nodemon worker.ts"
+    "start": "node ./dist/worker.js"
   },
   "author": "",
   "license": "ISC",

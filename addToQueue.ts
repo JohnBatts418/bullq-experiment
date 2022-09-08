@@ -1,6 +1,7 @@
 import { analysisQueue, jobData } from './worker';
 
 //adding into the queue on a seperate thread. Just like in sast-api + worker scenario
+analysisQueue.clean(0, 'failed');
 
 analysisQueue.add('exampleJob1', jobData, {
   jobId: 44444,

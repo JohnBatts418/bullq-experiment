@@ -2,6 +2,7 @@
 This used the sandbox workers as described here https://docs.bullmq.io/guide/workers/sandboxed-processors
 
 Here we block the event loop using the crypto lib. If we use the sandbox worker, it doesnt stall, if we dont, it does. 
+Can flip between these by uncommenting and comment lines 73 and 76. 
 
 
 ##### To install

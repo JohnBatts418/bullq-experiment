@@ -14,10 +14,10 @@ const ANALYSIS_CONCURRENCY = 2;
 export const analysisQueue = new Bull<JobData>('localTestQ', 'redis://127.0.0.1:6379', {
   redis: REDIS_OPTIONS,
   settings: {
-    maxStalledCount: 3,
-    stalledInterval: 1000,
-    lockDuration: 2000,
-    lockRenewTime: 1000,
+    // maxStalledCount: 3,
+    // stalledInterval: 1000,
+    // lockDuration: 2000, //sandbox worker doesnt seem to be affect by these.
+    // lockRenewTime: 1000,
     retryProcessDelay: 2000,
   },
   defaultJobOptions: {
@@ -31,11 +31,11 @@ export const analysisQueue = new Bull<JobData>('localTestQ', 'redis://127.0.0.1:
 
 analysisQueue.on('stalled', async job => {
   console.log(`Job ${job.id} stalled, on attempt ${job.attemptsMade}`);
-  // await storeProgressData(`${jobId}`, 'WAITING');
+  await storeProgressData(`${job.id}`, 'WAITING');
 });
-analysisQueue.on('waiting', async job => {
+analysisQueue.on('waiting', async jobId => {
   console.log(`Job ${jobId} is now waiting`);
-  await storeProgressData(`${job}`, 'WAITING');
+  await storeProgressData(`${jobId}`, 'WAITING');
 });
 
 analysisQueue.on('completed', async (job, result) => {
@@ -69,7 +69,11 @@ async function analyze(job: Bull.Job<JobData>) {
   return;
 }
 
-void analysisQueue.process('*', ANALYSIS_CONCURRENCY, analyze);
+//SANDBOX WORKER IMPLEMENTATION
+void analysisQueue.process('*', ANALYSIS_CONCURRENCY, `${__dirname}/external-analyze.js`);
+
+//LOCAL WORKER IMPLEMENTATION
+// void analysisQueue.process('*', ANALYSIS_CONCURRENCY, analyze);
 
 console.log('Queue is ready');
 
@@ -77,7 +81,7 @@ function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function sleeper(job: Bull.Job<JobData>, updateProgressCallback: (progress: number) => Promise<void>) {
+export async function sleeper(job: Bull.Job<JobData>, updateProgressCallback: (progress: number) => Promise<void>) {
   let ticker = 0;
   for (ticker; ticker < 10; ticker++) {
     updateProgressCallback(ticker);
@@ -95,12 +99,12 @@ export async function storeProgressData(keyHash: string, data: string): Promise<
 analysisQueue.add('exampleJob1', jobData, {
   jobId: 111111,
 });
-analysisQueue.add('exampleJob2', jobData, {
-  jobId: 2222222,
-});
-analysisQueue.add('exampleJob2', jobData, {
-  jobId: 3333333,
-});
+// analysisQueue.add('exampleJob2', jobData, {
+//   jobId: 2222222,
+// });
+// analysisQueue.add('exampleJob2', jobData, {
+//   jobId: 3333333,
+// });
 
 // Uncomment this if you want to clean redis on exit
 // process.on('SIGINT', () => {

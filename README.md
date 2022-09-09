@@ -1,4 +1,8 @@
-#### A playground to easily see how bullq handles messages
+### Custom Branch for trying sandbox worker
+This used the sandbox workers as described here https://docs.bullmq.io/guide/workers/sandboxed-processors
+
+Here we block the event loop using the crypto lib. If we use the sandbox worker, it doesnt stall, if we dont, it does. 
+
 
 ##### To install
 -  A redis instance running locally - `brew install redis` 
@@ -9,8 +13,3 @@
 
 ## If you want to clean redis
 `echo "flushall" | redis-cli -h 127.0.0.1 -p 6379 -a dev`
-
-#### Ideas you can try:
-- Decrease the queue timeout and see how it handles timeouts in the job processor
-- turn off or restart your redis instance while it is processing 
-- Your own custom backoff handler
